@@ -1,0 +1,23 @@
+You are analyzing a contiguous sequence of {{ num_pages }} pages from a PDF document. The images that follow are pages with 1-based indices {{ page_indices }}, shown in order. Each image is exactly one page.
+
+Return one record per page describing the document structure you can see.
+
+Per page, emit a `PageInfo` with the following fields:
+
+- `page_index` (int): the 1-based page index, taken from the list above. Do not invent indices.
+- `headings` (list of `PageHeading`): every heading that STARTS on this page. A heading is the title of a section, subsection, chapter, or appendix — text styled distinctly from body text (larger, bolder, set apart by whitespace) that introduces the content that follows. Each entry has:
+  - `text`: the heading text, quoted verbatim from the page.
+  - `visual_rank`: one of `xsmall`, `small`, `medium`, `large`, `xlarge`. Use the SAME rank consistently for headings that look the same size across the document. `xlarge` is reserved for the document title or top-level chapter titles; `xsmall` for the most-nested subsection labels you encounter. Most documents use 2–4 distinct ranks; do not invent more visual classes than the document actually shows.
+- `ending_sections` (list of strings): titles of sections that BEGAN on a previous page and END on THIS page. Use the same wording as the section's heading. Empty list if no sections end on this page. NEVER list a heading here that also appears in `headings` for the same page — `ending_sections` is for sections that started earlier.
+
+Hard exclusions — these are NOT headings, even if visually distinct:
+
+- Figure / table / algorithm / equation / listing / scheme captions (anything matching `Figure 1:`, `Table 2.`, `Algorithm 3`, `Equation 4`, `Listing 5`, `Scheme 6`, etc.).
+- Page numbers, running headers, running footers.
+- Author names, affiliations, email addresses.
+- The literal labels `Abstract`, `Keywords`, `References` (these are sometimes headings — only emit them if they look visually consistent with other section headings on adjacent pages).
+- Bold inline emphasis inside body paragraphs.
+
+If a page contains no section starts and no section ends, return empty lists for `headings` and `ending_sections` and emit the `page_index`.
+
+Output exactly one `PageBatchResponse` object whose `pages` array has one entry per input image, in page-index order.

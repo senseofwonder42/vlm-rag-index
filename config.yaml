@@ -1,0 +1,27 @@
+# Non-secret defaults. Env vars and .env override these. Secrets live in .env only.
+
+environment: local
+log_level: INFO
+
+llm_model: google/gemma-4-31b-it
+llm_base_url: https://openrouter.ai/api/v1
+llm_temperature: 0.0
+llm_max_output_tokens: 16000
+llm_max_retries: 10
+llm_retry_delay_s: 1.0
+llm_timeout: 120.0
+
+vlm_dpi: 144
+vlm_pages_per_batch: 1
+vlm_max_images_per_call: 1
+vlm_window_overlap: 0
+vlm_verify_heading_text: false
+
+index_add_node_id: true
+index_add_node_summary: false
+index_add_node_text: false
+index_add_doc_description: false
+index_results_dir: ./examples/results
+
+tracing_enabled: false
+langfuse_host: http://localhost:3000

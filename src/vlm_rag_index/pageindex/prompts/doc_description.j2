@@ -1,0 +1,9 @@
+You are writing a one-sentence description of an entire document.
+
+Document name: {{ doc_name }}
+
+Top-level section summaries:
+
+{% for title, summary in sections %}- {{ title }}: {{ summary }}
+{% endfor %}
+Write exactly one sentence that captures what this document is about. Do not invent facts not present in the section summaries.

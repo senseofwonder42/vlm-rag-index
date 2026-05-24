@@ -1,0 +1,10 @@
+You are merging partial summaries of one section of a document.
+
+Section title: {{ title }}
+Pages covered: {{ start_index }}–{{ end_index }}
+
+Partial summaries (in page order):
+
+{% for pages, partial in partials %}- Pages {{ pages }}: {{ partial }}
+{% endfor %}
+Write a single concise paragraph (2–4 sentences) describing what this section covers, synthesising across the partials. Do not use bullet points. Do not repeat the section title. Do not invent facts not present in the partial summaries.

@@ -1,0 +1,10 @@
+You are summarising a section that contains subsections.
+
+Section title: {{ title }}
+Pages covered: {{ start_index }}–{{ end_index }}
+
+Subsection summaries:
+
+{% for child_title, child_summary in children %}- {{ child_title }}: {{ child_summary }}
+{% endfor %}
+Write a single concise paragraph (2–4 sentences) describing what this section covers, synthesising across the subsections. Do not use bullet points. Do not repeat the section title. Do not invent facts not present in the subsection summaries.
