@@ -10,9 +10,9 @@ here.
 
 from __future__ import annotations
 
+from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.prebuilt import create_react_agent
 
 from vlm_rag_index.agent.tools import TOOLS
 from vlm_rag_index.core.config import settings
@@ -27,10 +27,10 @@ def build_graph() -> CompiledStateGraph:
         api_key=settings.llm_api_key.get_secret_value(),
         temperature=settings.llm_temperature,
     )
-    return create_react_agent(
+    return create_agent(
         model=model,
         tools=TOOLS,
-        prompt=render("agent_system.j2"),
+        system_prompt=render("agent_system.j2"),
     )
 
 
