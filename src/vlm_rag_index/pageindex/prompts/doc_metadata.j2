@@ -1,0 +1,16 @@
+You are extracting filing metadata for a single document so it can be placed in a corpus.
+
+Document name: {{ doc_name }}
+
+Top-level sections:
+
+{% for title, summary in sections %}- {{ title }}{% if summary %}: {{ summary }}{% endif %}
+{% endfor %}
+Produce metadata that would help someone locate this document among many others:
+
+- `category`: broad subject categories, most general first.
+- `entities`: named organisations, products, people, or time periods the document is about.
+- `summary`: one or two sentences capturing what the document is about.
+- `keywords`: salient terms a reader might search for.
+
+Base every field only on the section titles and summaries above. Do not invent facts. Prefer the document's own terminology.

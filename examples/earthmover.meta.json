@@ -1,0 +1,16 @@
+{
+  "doc_name": "earthmover.pdf",
+  "category": [
+    "Computer Science",
+    "Algorithm Design"
+  ],
+  "entities": [],
+  "summary": "The document discusses solving SP UP and enhancing the refinement phase through dynamic refinement ordering.",
+  "keywords": [
+    "SP UP",
+    "refinement phase",
+    "Dynamic Refinement Ordering",
+    "experimental evaluation"
+  ],
+  "schema_version": 1
+}

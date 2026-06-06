@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     index_add_node_summary: bool = False
     index_add_node_text: bool = False
     index_add_doc_description: bool = False
+    index_add_metadata: bool = True
     index_results_dir: Path = PROJECT_ROOT / "examples" / "results"
 
     tracing_enabled: bool = False
