@@ -1,0 +1,14 @@
+You are navigating a corpus of documents toward those relevant to a query. The documents are grouped into folders by their `{{ axis }}`. Decide which folders are worth descending into.
+
+Query:
+
+{{ query }}
+
+Folders (name — number of documents):
+
+{% for label, count in folders %}- {{ label }} — {{ count }}
+{% endfor %}
+Return:
+
+- `relevant_labels`: the folder names worth keeping. Use the exact names above. Pick only folders that plausibly contain documents relevant to the query.
+- `confidence`: a number from 0 to 1 for how clearly the folder names discriminate relevant from irrelevant. Use a LOW value (below 0.6) when the folder names don't help distinguish — when in doubt the caller will keep all folders and decide deeper.

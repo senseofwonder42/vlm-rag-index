@@ -23,5 +23,11 @@ index_add_node_text: false
 index_add_doc_description: false
 index_results_dir: ./examples/results
 
+# Multi-document filesystem (Phase 4). filesystem_meta_model defaults to llm_model.
+filesystem_axes_default: ["category", "entities"]
+filesystem_max_tree_depth: 3
+filesystem_flatten_threshold: 0.6
+filesystem_max_llm_hops_per_query: 5
+
 tracing_enabled: false
 langfuse_host: http://localhost:3000

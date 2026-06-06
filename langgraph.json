@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "agent": "./src/vlm_rag_index/agent/graph.py:graph"
+  },
+  "env": ".env"
+}

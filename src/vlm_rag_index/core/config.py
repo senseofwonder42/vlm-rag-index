@@ -53,10 +53,25 @@ class Settings(BaseSettings):
     index_add_metadata: bool = True
     index_results_dir: Path = PROJECT_ROOT / "examples" / "results"
 
+    filesystem_meta_model: str | None = None
+    filesystem_axes_default: list[str] = ["category", "entities"]
+    filesystem_max_tree_depth: int = 3
+    filesystem_flatten_threshold: float = 0.6
+    filesystem_max_llm_hops_per_query: int = 5
+
     tracing_enabled: bool = False
     langfuse_host: str = "http://localhost:3000"
     langfuse_public_key: SecretStr = SecretStr("")
     langfuse_secret_key: SecretStr = SecretStr("")
+
+    @property
+    def filesystem_model(self) -> str:
+        """Model id for the filesystem layer's small reasoning calls.
+
+        Defaults to `llm_model`; `filesystem_meta_model` lets a cheaper model
+        handle axis selection and traversal decisions.
+        """
+        return self.filesystem_meta_model or self.llm_model
 
     @classmethod
     def settings_customise_sources(
