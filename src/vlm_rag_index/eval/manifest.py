@@ -20,7 +20,7 @@ class ManifestRow(BaseModel):
 
     pdf: str
     query: str
-    query_id: str
+    query_id: int
     answer: str
     answer_page_index: int | list[int]
     domain: str

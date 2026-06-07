@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from langgraph.graph.state import CompiledStateGraph
 from loguru import logger
 
+from vlm_rag_index.agent.tracing import trace_run
+
 
 @dataclass
 class AgentRun:
@@ -69,10 +71,11 @@ async def run_query(
         a single bad query never aborts a batch.
     """
     try:
-        result = await graph.ainvoke(
-            {"messages": [{"role": "user", "content": question}]},
-            config={"recursion_limit": recursion_limit},
-        )
+        with trace_run("ask", input=question) as callbacks:
+            result = await graph.ainvoke(
+                {"messages": [{"role": "user", "content": question}]},
+                config={"recursion_limit": recursion_limit, "callbacks": callbacks},
+            )
     except Exception as exc:  # noqa: BLE001 - one row's failure must not kill the batch
         logger.warning("query failed: {}", exc)
         return AgentRun(error=str(exc))
