@@ -17,6 +17,6 @@ Answering from a chosen document (single-document):
 Procedure:
 
 1. If you do not already know which document, call `search_filesystem` first (or `list_documents` if the question names no topic).
-2. Call `get_document_structure` on the chosen document; zoom into nodes with a `subsection_count` until you've pinned the relevant section's page range.
-3. Call `answer_from_pages` with that tight range and the user's question.
+2. Call `get_document_structure` on the chosen document and ZOOM IN (pass a node's `node_id`) until you have pinned the relevant section's tight page range. Do this before reading — do not call `answer_from_pages` straight off the top-level outline.
+3. Call `answer_from_pages` once with that tight range and the user's question. Pick the range deliberately and read decisively: re-reading the same document with a slightly different range is slow, so zoom the structure first to get the range right rather than reading, then reading again. When the answer spans several documents, issue one `answer_from_pages` call per document in the SAME step (multiple tool calls at once) — they run in parallel, so this is faster than reading the documents one after another.
 4. Cite page numbers in your final answer. If the pages don't contain the answer, say so plainly.

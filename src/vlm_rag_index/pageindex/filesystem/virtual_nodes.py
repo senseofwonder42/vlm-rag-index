@@ -8,20 +8,10 @@ a projection of the metadata, not a fixed hierarchy.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
-
 from vlm_rag_index.pageindex.filesystem.store import CorpusDoc
-from vlm_rag_index.pageindex.llm.protocol import LLMClient, Message
-from vlm_rag_index.pageindex.prompts import render
 
 # Sidecar fields that are list-valued and therefore usable as folder axes.
 AXIS_FIELDS: tuple[str, ...] = ("category", "entities", "keywords")
-
-
-class AxisChoice(BaseModel):
-    """The axis the LLM picked to discriminate documents for a query."""
-
-    axis: str = Field(description="One of the offered axis names, copied verbatim.")
 
 
 def _values(doc: CorpusDoc, axis: str) -> list[str]:
@@ -58,26 +48,6 @@ def project(corpus: list[CorpusDoc], axis: str) -> dict[str, list[str]]:
             if doc.doc_name not in bins[label]:
                 bins[label].append(doc.doc_name)
     return {label: bins[label] for label in sorted(bins)}
-
-
-async def select_axis(
-    client: LLMClient,
-    query: str,
-    axes: list[str],
-    corpus: list[CorpusDoc],
-) -> str:
-    """Ask the LLM which axis best separates relevant documents for `query`.
-
-    Falls back to the first offered axis if the model returns an unknown name.
-    """
-    axis_values = [
-        (axis, sorted({v for doc in corpus for v in _values(doc, axis)}))
-        for axis in axes
-    ]
-    prompt = render("fs_select_axis.j2", query=query, axes=axis_values)
-    messages: list[Message] = [{"role": "user", "content": prompt}]
-    choice = await client.acomplete_structured(messages, AxisChoice)
-    return choice.axis if choice.axis in axes else axes[0]
 
 
 def folder_children(

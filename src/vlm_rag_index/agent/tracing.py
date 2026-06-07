@@ -14,7 +14,7 @@ than failing the request.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
 
@@ -22,9 +22,11 @@ from loguru import logger
 
 from vlm_rag_index.core.config import settings
 
+RecordOutput = Callable[[Any], None]
+
 
 @contextmanager
-def trace_run(name: str, *, input: Any = None) -> Iterator[list[Any]]:
+def trace_run(name: str, *, input: Any = None) -> Iterator[tuple[list[Any], RecordOutput]]:
     """Wrap one agent run in a single Langfuse trace.
 
     Args:
@@ -32,18 +34,35 @@ def trace_run(name: str, *, input: Any = None) -> Iterator[list[Any]]:
         input: Trace input to record (e.g. the user question).
 
     Yields:
-        Callback handlers to pass via `RunnableConfig(callbacks=...)`. Empty when
-        tracing is disabled or unavailable.
+        A ``(callbacks, record_output)`` pair. `callbacks` go into
+        `RunnableConfig(callbacks=...)`; call `record_output(obj)` to attach the
+        run's result (answer, pages read) to the root span. Both degrade to no-ops
+        when tracing is disabled or unavailable.
     """
+
+    def _noop(_output: Any) -> None:
+        return
+
     if not settings.tracing_enabled:
-        yield []
+        yield [], _noop
         return
     try:
         from langfuse import get_client
         from langfuse.langchain import CallbackHandler
     except Exception as exc:  # integration not installed / unavailable
         logger.warning("tracing enabled but Langfuse unavailable: {}", exc)
-        yield []
+        yield [], _noop
         return
-    with get_client().start_as_current_observation(name=name, as_type="span", input=input):
-        yield [CallbackHandler()]
+    client = get_client()
+    try:
+        with client.start_as_current_observation(
+            name=name, as_type="span", input=input
+        ) as span:
+
+            def record_output(output: Any) -> None:
+                span.update(output=output)
+
+            yield [CallbackHandler()], record_output
+    finally:
+        # `ask`/`eval` are short-lived processes; flush so late spans aren't lost.
+        client.flush()

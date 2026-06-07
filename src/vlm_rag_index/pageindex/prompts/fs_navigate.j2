@@ -1,0 +1,18 @@
+You are navigating a corpus of documents toward those relevant to a search query. In one step: pick the single metadata axis whose folders best separate relevant documents from irrelevant ones, then say which of that axis's folders are worth descending into.
+
+Query:
+
+{{ query }}
+
+Available axes. Each lists its folders for the current candidate set as (folder name — document count):
+
+{% for axis, folders in axes %}
+`{{ axis }}`:
+{% for label, count in folders %}- {{ label }} — {{ count }}
+{% endfor %}
+{% endfor %}
+Return:
+
+- `axis`: the one axis name above whose folders most sharply discriminate relevant documents from irrelevant ones. Copy it exactly as written.
+- `relevant_labels`: the folders ON THAT CHOSEN AXIS worth keeping, copied exactly from the list above. Pick only folders that plausibly contain documents relevant to the query.
+- `confidence`: a number from 0 to 1 for how clearly the chosen axis's folder names discriminate relevant from irrelevant. Use a LOW value (below 0.6) when the names don't help distinguish — when in doubt the caller will keep all folders and decide deeper on another axis.

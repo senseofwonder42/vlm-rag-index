@@ -129,28 +129,32 @@ def document_structure(
     }
 
 
-def _node_fields(node: TreeNode) -> dict:
+def _node_fields(node: TreeNode, *, summary: bool = True) -> dict:
     out: dict = {
         "node_id": node.node_id,
         "title": node.title,
         "start_index": node.start_index,
         "end_index": node.end_index,
     }
-    if node.summary is not None:
+    if summary and node.summary is not None:
         out["summary"] = node.summary
     return out
 
 
-def _shape(node: TreeNode, levels: int) -> dict:
+def _shape(node: TreeNode, levels: int, *, summary: bool = True) -> dict:
     """Strip `text` and keep only `levels` levels of descendants below `node`.
+
+    `summary` is carried only on the outermost level the caller is choosing among;
+    deeper preview levels get title and page range only (their summaries are
+    revealed by zooming in), which keeps the payload small on deep documents.
 
     A node whose children are cut off by the depth limit gets a `subsection_count`
     so the caller knows it can be expanded via `node_id`.
     """
-    out = _node_fields(node)
+    out = _node_fields(node, summary=summary)
     if node.nodes:
         if levels > 1:
-            out["nodes"] = [_shape(child, levels - 1) for child in node.nodes]
+            out["nodes"] = [_shape(child, levels - 1, summary=False) for child in node.nodes]
         else:
             out["subsection_count"] = len(node.nodes)
     return out

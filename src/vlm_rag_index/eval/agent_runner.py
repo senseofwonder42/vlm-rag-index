@@ -71,17 +71,23 @@ async def run_query(
         a single bad query never aborts a batch.
     """
     try:
-        with trace_run("ask", input=question) as callbacks:
+        with trace_run("ask", input=question) as (callbacks, record_output):
             result = await graph.ainvoke(
                 {"messages": [{"role": "user", "content": question}]},
                 config={"recursion_limit": recursion_limit, "callbacks": callbacks},
             )
+            messages = result.get("messages", [])
+            run = AgentRun(
+                final_answer=_final_text(messages),
+                calls=_extract_calls(messages),
+            )
+            record_output(
+                {
+                    "answer": run.final_answer,
+                    "pages_read": [{"doc": doc, "pages": pages} for doc, pages in run.calls],
+                }
+            )
+            return run
     except Exception as exc:  # noqa: BLE001 - one row's failure must not kill the batch
         logger.warning("query failed: {}", exc)
         return AgentRun(error=str(exc))
-
-    messages = result.get("messages", [])
-    return AgentRun(
-        final_answer=_final_text(messages),
-        calls=_extract_calls(messages),
-    )

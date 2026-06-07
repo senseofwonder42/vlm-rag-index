@@ -59,6 +59,18 @@ class Settings(BaseSettings):
     filesystem_flatten_threshold: float = 0.6
     filesystem_max_llm_hops_per_query: int = 5
 
+    # Agent reasoning model (see agent/graph.py). Defaults to `llm_model`;
+    # `agent_model_override` lets the orchestrator use a stronger- or faster-planning
+    # model independently of the VLM/filesystem clients.
+    agent_model_override: str | None = None
+
+    # Agent context management (see agent/graph.py). Keeps the reasoning model's
+    # prompt bounded across long, multi-turn conversations.
+    agent_context_edit_trigger_tokens: int = 40000
+    agent_context_edit_keep: int = 3
+    agent_summary_trigger_tokens: int = 60000
+    agent_summary_keep_messages: int = 20
+
     tracing_enabled: bool = False
     langfuse_host: str = "http://localhost:3000"
     langfuse_public_key: SecretStr = SecretStr("")
@@ -72,6 +84,15 @@ class Settings(BaseSettings):
         handle axis selection and traversal decisions.
         """
         return self.filesystem_meta_model or self.llm_model
+
+    @property
+    def agent_model(self) -> str:
+        """Model id for the LangGraph agent's reasoning loop.
+
+        Defaults to `llm_model`; `agent_model_override` lets the orchestrator run on
+        a different model than the pipeline's VLM/filesystem calls.
+        """
+        return self.agent_model_override or self.llm_model
 
     @classmethod
     def settings_customise_sources(

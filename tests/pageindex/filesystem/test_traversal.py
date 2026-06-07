@@ -10,7 +10,7 @@ import pytest
 from pydantic import BaseModel
 
 from vlm_rag_index.core.config import Settings
-from vlm_rag_index.pageindex.filesystem import store, traversal, virtual_nodes
+from vlm_rag_index.pageindex.filesystem import store, traversal
 
 
 class ScriptedClient:
@@ -37,17 +37,15 @@ def _settings(**overrides) -> Settings:
     return Settings(**base)
 
 
-def _axis(name: str) -> virtual_nodes.AxisChoice:
-    return virtual_nodes.AxisChoice(axis=name)
-
-
-def _decision(labels: list[str], confidence: float) -> traversal.RelevanceDecision:
-    return traversal.RelevanceDecision(relevant_labels=labels, confidence=confidence)
+def _nav(axis: str, labels: list[str], confidence: float) -> traversal.NavigationDecision:
+    return traversal.NavigationDecision(
+        axis=axis, relevant_labels=labels, confidence=confidence
+    )
 
 
 async def test_search_narrows_to_single_document(corpus_dir: Path):
     corpus = store.load_corpus(corpus_dir)
-    client = ScriptedClient([_axis("entities"), _decision(["Q3 2023"], 0.9)])
+    client = ScriptedClient([_nav("entities", ["Q3 2023"], 0.9)])
 
     result = await traversal.search_filesystem(
         "Which document discusses Q3 revenue?",
@@ -57,17 +55,15 @@ async def test_search_narrows_to_single_document(corpus_dir: Path):
     )
 
     assert result == ["fin_q3_2023.pdf"]
-    assert client.schemas == ["AxisChoice", "RelevanceDecision"]
+    assert client.schemas == ["NavigationDecision"]  # one call, not two
 
 
 async def test_low_confidence_flattens_then_descends_next_axis(corpus_dir: Path):
     corpus = store.load_corpus(corpus_dir)
     client = ScriptedClient(
         [
-            _axis("category"),
-            _decision([], 0.2),  # unclear -> flatten, keep all, try next axis
-            _axis("entities"),
-            _decision(["Q3 2023"], 0.95),
+            _nav("category", [], 0.2),  # unclear -> flatten, keep all, try next axis
+            _nav("entities", ["Q3 2023"], 0.95),
         ]
     )
 
@@ -84,7 +80,7 @@ async def test_low_confidence_flattens_then_descends_next_axis(corpus_dir: Path)
 async def test_relevant_category_narrows_candidate_set(corpus_dir: Path):
     corpus = store.load_corpus(corpus_dir)
     # One hop: pick category, keep only "legal" (6 docs), then stop (depth budget 1).
-    client = ScriptedClient([_axis("category"), _decision(["legal"], 0.9)])
+    client = ScriptedClient([_nav("category", ["legal"], 0.9)])
 
     result = await traversal.search_filesystem(
         "Find the NDA",
@@ -106,29 +102,34 @@ async def test_relevant_category_narrows_candidate_set(corpus_dir: Path):
 
 async def test_hop_budget_caps_llm_calls(corpus_dir: Path):
     corpus = store.load_corpus(corpus_dir)
-    # Budget of 1: only the axis-selection call fits; no narrowing happens.
-    client = ScriptedClient([_axis("category")])
+    # Budget of 1: one fused call narrows once, then the budget halts further descent.
+    client = ScriptedClient([_nav("category", ["legal"], 0.9)])
 
     result = await traversal.search_filesystem(
-        "anything",
+        "Find the NDA",
         corpus,
         client=client,
         settings=_settings(filesystem_max_llm_hops_per_query=1),
     )
 
-    assert len(result) == 21
-    assert client.schemas == ["AxisChoice"]
+    assert len(result) == 6  # narrowed to legal, then stopped on budget
+    assert client.schemas == ["NavigationDecision"]
 
 
-async def test_select_axis_clamps_unknown_axis(corpus_dir: Path):
+async def test_navigate_clamps_unknown_axis(corpus_dir: Path):
     corpus = store.load_corpus(corpus_dir)
-    client = ScriptedClient([_axis("not_a_real_axis")])
+    # An unknown axis name falls back to the first offered axis ("category").
+    client = ScriptedClient([_nav("not_a_real_axis", ["legal"], 0.9)])
 
-    axis = await virtual_nodes.select_axis(
-        client, "q", ["category", "entities"], corpus
+    result = await traversal.search_filesystem(
+        "Find the NDA",
+        corpus,
+        client=client,
+        settings=_settings(filesystem_max_tree_depth=1),
     )
 
-    assert axis == "category"  # falls back to first offered axis
+    assert len(result) == 6
+    assert all(name.startswith("legal_") for name in result)
 
 
 @pytest.mark.parametrize("query", ["Which document discusses Q3 revenue?"])

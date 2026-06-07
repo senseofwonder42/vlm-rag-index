@@ -58,6 +58,37 @@ def test_document_structure_strips_text(tmp_path: Path):
     assert out["structure"][0]["nodes"][0]["title"] == "1.1 Sub"
 
 
+def test_document_structure_summary_only_on_outermost_level(tmp_path: Path):
+    # Top section and its child both carry a summary; on an auto-expanded view the
+    # outermost level keeps its summary but the deeper preview level drops it.
+    structure = [
+        {
+            "title": "1 Intro",
+            "node_id": "0001",
+            "start_index": 1,
+            "end_index": 4,
+            "summary": "TOP SUMMARY",
+            "nodes": [
+                {
+                    "title": "1.1 Sub",
+                    "node_id": "0002",
+                    "start_index": 1,
+                    "end_index": 2,
+                    "summary": "CHILD SUMMARY",
+                }
+            ],
+        }
+    ]
+    write_doc(tmp_path, "doc", category=["a"], summary="x", structure=structure)
+
+    out = store.document_structure(tmp_path, "doc.pdf")  # auto -> expands to level 2
+
+    assert isinstance(out, dict)
+    top = out["structure"][0]
+    assert top["summary"] == "TOP SUMMARY"
+    assert "summary" not in top["nodes"][0]  # deeper preview level trimmed
+
+
 def _leaf(title: str, node_id: str, start: int, end: int) -> dict:
     return {"title": title, "node_id": node_id, "start_index": start, "end_index": end}
 
