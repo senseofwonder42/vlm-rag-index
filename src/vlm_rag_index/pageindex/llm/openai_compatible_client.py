@@ -14,6 +14,15 @@ T = TypeVar("T", bound=BaseModel)
 _RETRYABLE_STATUS = {408, 425, 429, 500, 502, 503, 504}
 
 
+def _has_image(messages: list[Message]) -> bool:
+    """Return True if any message carries an `image_url` content part."""
+    return any(
+        isinstance(message["content"], list)
+        and any(part["type"] == "image_url" for part in message["content"])
+        for message in messages
+    )
+
+
 class OpenAICompatibleClient:
     """Raw httpx-based client targeting any OpenAI-compatible chat completions endpoint."""
 
@@ -26,6 +35,12 @@ class OpenAICompatibleClient:
         timeout: float = 120.0,
         max_output_tokens: int = 16000,
         temperature: float = 0.0,
+        top_p: float | None = None,
+        top_k: int | None = None,
+        repetition_penalty: float | None = None,
+        enable_thinking: bool = True,
+        max_soft_tokens: int | None = None,
+        extra_body: dict[str, Any] | None = None,
         max_retries: int = 10,
         retry_delay_s: float = 1.0,
     ) -> None:
@@ -34,6 +49,12 @@ class OpenAICompatibleClient:
         self._timeout = timeout
         self._max_output_tokens = max_output_tokens
         self._temperature = temperature
+        self._top_p = top_p
+        self._top_k = top_k
+        self._repetition_penalty = repetition_penalty
+        self._enable_thinking = enable_thinking
+        self._max_soft_tokens = max_soft_tokens
+        self._extra_body = extra_body or {}
         self._max_retries = max_retries
         self._retry_delay_s = retry_delay_s
         self._headers = {
@@ -57,6 +78,23 @@ class OpenAICompatibleClient:
             "temperature": self._temperature,
             "max_tokens": self._max_output_tokens,
         }
+        if self._top_p is not None:
+            payload["top_p"] = self._top_p
+        if self._top_k is not None:
+            payload["top_k"] = self._top_k
+        if self._repetition_penalty is not None:
+            payload["repetition_penalty"] = self._repetition_penalty
+        if not self._enable_thinking:
+            # vLLM passes this through to the chat template, suppressing Gemma's
+            # reasoning block. Only emitted when disabling so default payloads are untouched.
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+        if self._max_soft_tokens is not None and _has_image(messages):
+            # Dynamic vision budget: per-request override of the vision tower's
+            # soft-token allocation. Only meaningful when the request carries an image.
+            payload["mm_processor_kwargs"] = {"max_soft_tokens": self._max_soft_tokens}
+        # Static passthrough for any vLLM sampling knob not surfaced as a typed field;
+        # per-call kwargs still win over both this and the typed defaults above.
+        payload.update(self._extra_body)
         payload.update(kwargs)
         if schema is not None:
             payload["response_format"] = {

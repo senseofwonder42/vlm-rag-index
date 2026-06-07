@@ -121,6 +121,112 @@ def test_non_retryable_4xx_raises_immediately():
     assert calls["n"] == 1
 
 
+def _image_messages() -> list[dict[str, Any]]:
+    return [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,xxx"}},
+                {"type": "text", "text": "describe"},
+            ],
+        }
+    ]
+
+
+def test_sampling_and_thinking_in_payload():
+    captured: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(json.loads(request.content.decode()))
+        return _canned_response("ok")
+
+    import asyncio
+
+    c = OpenAICompatibleClient(
+        base_url="https://example.test",
+        api_key="x",
+        model="m",
+        top_p=0.9,
+        top_k=40,
+        repetition_penalty=1.1,
+        enable_thinking=False,
+    )
+    c._aclient = httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), base_url="https://example.test", headers=c._headers
+    )
+    asyncio.run(c.acomplete([{"role": "user", "content": "hi"}]))
+    body = captured[0]
+    assert body["top_p"] == 0.9
+    assert body["top_k"] == 40
+    assert body["repetition_penalty"] == 1.1
+    assert body["chat_template_kwargs"] == {"enable_thinking": False}
+
+
+def test_sampling_omitted_when_unset():
+    captured: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(json.loads(request.content.decode()))
+        return _canned_response("ok")
+
+    c = _client(httpx.MockTransport(handler))
+    c.complete([{"role": "user", "content": "x"}])
+    body = captured[0]
+    assert "top_p" not in body
+    assert "top_k" not in body
+    assert "repetition_penalty" not in body
+    # enable_thinking defaults to True in the bare client → no chat_template_kwargs.
+    assert "chat_template_kwargs" not in body
+    assert "mm_processor_kwargs" not in body
+
+
+def test_max_soft_tokens_only_on_image_requests():
+    captured: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(json.loads(request.content.decode()))
+        return _canned_response("ok")
+
+    import asyncio
+
+    c = OpenAICompatibleClient(
+        base_url="https://example.test", api_key="x", model="m", max_soft_tokens=1120
+    )
+    c._aclient = httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), base_url="https://example.test", headers=c._headers
+    )
+    asyncio.run(c.acomplete(_image_messages()))
+    asyncio.run(c.acomplete([{"role": "user", "content": "text only"}]))
+    assert captured[0]["mm_processor_kwargs"] == {"max_soft_tokens": 1120}
+    assert "mm_processor_kwargs" not in captured[1]
+
+
+def test_extra_body_merged_and_overridable():
+    captured: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(json.loads(request.content.decode()))
+        return _canned_response("ok")
+
+    import asyncio
+
+    c = OpenAICompatibleClient(
+        base_url="https://example.test",
+        api_key="x",
+        model="m",
+        temperature=0.0,
+        extra_body={"min_p": 0.05, "temperature": 0.7},
+    )
+    c._aclient = httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), base_url="https://example.test", headers=c._headers
+    )
+    # Per-call kwargs win over extra_body, which wins over the typed default.
+    asyncio.run(c.acomplete([{"role": "user", "content": "x"}], min_p=0.2))
+    body = captured[0]
+    assert body["min_p"] == 0.2
+    assert body["temperature"] == 0.7
+
+
 def test_count_tokens_heuristic():
     c = OpenAICompatibleClient(
         base_url="https://example.test", api_key="x", model="m"

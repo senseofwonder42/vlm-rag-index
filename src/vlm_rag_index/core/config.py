@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from dotenv import load_dotenv
 from pydantic import SecretStr
@@ -35,12 +35,23 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://openrouter.ai/api/v1"
     llm_api_key: SecretStr = SecretStr("")
     llm_temperature: float = 0.0
+    llm_top_p: float | None = None
+    llm_top_k: int | None = None
+    llm_repetition_penalty: float | None = None
+    # Gemma emits a reasoning block by default; we don't need it for structured reads.
+    llm_enable_thinking: bool = False
+    # Escape hatch for vLLM sampling knobs not surfaced as typed fields (e.g. min_p,
+    # presence_penalty, stop). Merged into the request body; per-call kwargs override it.
+    llm_extra_body: dict[str, Any] = {}
     llm_max_output_tokens: int = 16000
     llm_max_retries: int = 10
     llm_retry_delay_s: float = 1.0
     llm_timeout: float = 120.0
 
     vlm_dpi: int = 144
+    # Per-request vision-tower soft-token budget (mm_processor_kwargs.max_soft_tokens).
+    # None leaves the server's default in place.
+    vlm_max_soft_tokens: int | None = None
     vlm_pages_per_batch: int = 8
     vlm_max_images_per_call: int = 8
     vlm_window_overlap: int = 0

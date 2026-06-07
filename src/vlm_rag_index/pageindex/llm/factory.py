@@ -12,6 +12,12 @@ def get_default_client(model: str | None = None) -> LLMClient:
         timeout=settings.llm_timeout,
         max_output_tokens=settings.llm_max_output_tokens,
         temperature=settings.llm_temperature,
+        top_p=settings.llm_top_p,
+        top_k=settings.llm_top_k,
+        repetition_penalty=settings.llm_repetition_penalty,
+        enable_thinking=settings.llm_enable_thinking,
+        max_soft_tokens=settings.vlm_max_soft_tokens,
+        extra_body=settings.llm_extra_body,
         max_retries=settings.llm_max_retries,
         retry_delay_s=settings.llm_retry_delay_s,
     )
