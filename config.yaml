@@ -18,9 +18,9 @@ vlm_window_overlap: 0
 vlm_verify_heading_text: false
 
 index_add_node_id: true
-index_add_node_summary: false
+index_add_node_summary: true
 index_add_node_text: false
-index_add_doc_description: false
+index_add_doc_description: true
 index_results_dir: ./examples/results
 
 # Multi-document filesystem (Phase 4). filesystem_meta_model defaults to llm_model.

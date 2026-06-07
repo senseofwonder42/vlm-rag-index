@@ -22,6 +22,10 @@ dependencies = [
 
 [project.scripts]
 index = "vlm_rag_index.cli.index:main"
+subsample = "vlm_rag_index.eval.subsample:main"
+inject = "vlm_rag_index.eval.inject:main"
+ask = "vlm_rag_index.eval.ask:main"
+eval-pages = "vlm_rag_index.eval.run_eval:main"
 
 [dependency-groups]
 dev = [
